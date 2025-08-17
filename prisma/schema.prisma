@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String           @id @default(uuid())
+  name           String?
+  email          String           @unique
+  authProvider   String?
+  createdAt      DateTime         @default(now())
+  trips          Trip[]           @relation("TripOwner")
+  media          Media[]          @relation("MediaOwner")
+  comments       Comment[]
+  tripMemberships TripMembership[]
+}
+
+model Trip {
+  id            String        @id @default(uuid())
+  title         String
+  description   String?
+  startDate     DateTime
+  endDate       DateTime
+  coverMediaId  String?
+  visibility    String        @default("private")
+  ownerId       String
+  owner         User          @relation("TripOwner", fields: [ownerId], references: [id])
+  memberships   TripMembership[]
+  media         Media[]
+  tripDays      TripDay[]
+}
+
+model TripMembership {
+  id      String  @id @default(uuid())
+  tripId  String
+  userId  String
+  role    String
+  trip    Trip    @relation(fields: [tripId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+}
+
+model Media {
+  id            String     @id @default(uuid())
+  tripId        String
+  type          String
+  source        String
+  sourceId      String
+  ownerId       String
+  capturedAt    DateTime?
+  uploadedAt    DateTime   @default(now())
+  title         String?
+  description   String?
+  location      String?
+  isVisible     Boolean    @default(true)
+  trip          Trip       @relation(fields: [tripId], references: [id])
+  owner         User       @relation("MediaOwner", fields: [ownerId], references: [id])
+  meta          MediaMeta?
+  tags          MediaTag[]
+  people        MediaPerson[]
+  comments      Comment[]
+}
+
+model MediaMeta {
+  id          String   @id @default(uuid())
+  mediaId     String   @unique
+  exifJson    Json?
+  camera      String?
+  lens        String?
+  focalLength Float?
+  shutter     Float?
+  iso         Int?
+  gps         Json?
+  width       Int?
+  height      Int?
+  durationS   Float?
+  media       Media    @relation(fields: [mediaId], references: [id])
+}
+
+model Tag {
+  id      String   @id @default(uuid())
+  name    String   @unique
+  media   MediaTag[]
+}
+
+model MediaTag {
+  id      String   @id @default(uuid())
+  mediaId String
+  tagId   String
+  media   Media    @relation(fields: [mediaId], references: [id])
+  tag     Tag      @relation(fields: [tagId], references: [id])
+}
+
+model Person {
+  id          String   @id @default(uuid())
+  displayName String
+  media       MediaPerson[]
+}
+
+model MediaPerson {
+  id       String  @id @default(uuid())
+  mediaId  String
+  personId String
+  media    Media   @relation(fields: [mediaId], references: [id])
+  person   Person  @relation(fields: [personId], references: [id])
+}
+
+model Comment {
+  id         String    @id @default(uuid())
+  mediaId    String
+  userId     String
+  parentId   String?
+  text       String
+  createdAt  DateTime  @default(now())
+  editedAt   DateTime?
+  media      Media     @relation(fields: [mediaId], references: [id])
+  user       User      @relation(fields: [userId], references: [id])
+  parent     Comment?  @relation("CommentParent", fields: [parentId], references: [id])
+  replies    Comment[] @relation("CommentParent")
+}
+
+model TripDay {
+  id      String   @id @default(uuid())
+  tripId  String
+  date    DateTime
+  trip    Trip     @relation(fields: [tripId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  entity    String
+  entityId  String
+  userId    String
+  diffJson  Json?
+  createdAt DateTime @default(now())
+}
